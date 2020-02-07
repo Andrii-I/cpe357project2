@@ -57,28 +57,45 @@ unsigned char* mymalloc(unsigned int size) // function's return is void
         return (unsigned char*)data_p; 
     }
     
-    
+    chunkhead * best_td = NULL;
     for (chunkhead* ch = startofheap; ch != NULL; ch = (chunkhead*)ch->next)
     {
         //implement "BEST FIT" MECHANISM
+        
+
         if (ch->info == 0 && ch->size >= mem_to_alloc - sizeof(chunkhead))
         {
-
-            ch->info = 1;
-            if ( ch->size - (mem_to_alloc - sizeof(chunkhead)) >= PAGESIZE )
+            if (best_td == NULL)
             {
-                chunkhead* new_ch = (chunkhead*)((unsigned char*)ch + mem_to_alloc);
-                new_ch->info = 0;
-
-                new_ch->size = ch->size - (mem_to_alloc - sizeof(chunkhead));
-                ch->size = ch->size - new_ch->size - sizeof(chunkhead);
-
-                ch->next = (unsigned char*)new_ch;
-                new_ch->prev = (unsigned char*)ch;
-                new_ch->next = (unsigned char*)ch->next;               
+                best_td = ch;
             }
-            return (unsigned char*)ch + sizeof(chunkhead);
+            else
+            {
+                if ( ch->size < best_td->size )
+                {
+                    best_td = ch;
+                }
+            }
         }  
+    }
+
+    if (best_td != NULL)
+    {
+        chunkhead* ch = best_td;
+        ch->info = 1;
+        if ( ch->size - (mem_to_alloc - sizeof(chunkhead)) >= PAGESIZE )
+        {
+            chunkhead* new_ch = (chunkhead*)((unsigned char*)ch + mem_to_alloc);
+            new_ch->info = 0;
+
+            new_ch->size = ch->size - (mem_to_alloc - sizeof(chunkhead));
+            ch->size = ch->size - new_ch->size - sizeof(chunkhead);
+
+            ch->next = (unsigned char*)new_ch;
+            new_ch->prev = (unsigned char*)ch;
+            new_ch->next = (unsigned char*)ch->next;               
+        }
+        return (unsigned char*)ch + sizeof(chunkhead);
     }
 
     //IF NO CHUNKS WITH ENOUGH FREE SPACE EXISTS, CREATE A NEW ONE
@@ -216,7 +233,8 @@ void analyze()
     printf("\n--------------------------------------------------------------\n");
     if(!startofheap)
     {
-        printf("no heap\n");
+        void* brk = sbrk(0);
+        printf("no heap, program break on address: %x\n", (int)brk);
         return;
     }
     chunkhead* ch = (chunkhead*)startofheap;
@@ -229,28 +247,35 @@ void analyze()
         printf("prev: %x", (int)ch->prev);
         printf(" \n");
     }
+    void* brk = sbrk(0);
+    printf("program break on address: %x\n", (int)brk);
 }
 
 
 
 void main()
 {
+    printf("\n");
 /*     void *programbreak_1 = sbrk(0);
     brk(programbreak_1 + 1024);                //funfact, void* plus offset works here
     void *programbreak_2 = sbrk(0);           //programbreak 2 is now exactly 1024 bytes away from the first. I debugged it and confirmed
     brk(programbreak_1);
     void *programbreak_3 = sbrk(0);           //programbreak 3 is now back to address of the first! */
 
-/*     unsigned char *a, *b, *c;
+/*     unsigned char *a, *b, *c, *d, *e;
     a = mymalloc(1000);
-    b = mymalloc(1000);
+    b = mymalloc(9000);
+    c = mymalloc(1000);
+    d = mymalloc(1000);
+    e = mymalloc(1000);
 
-    analyze();
-    myfree(a);
-    analyze();
+    
     myfree(b);
+    myfree(d);
+    mymalloc(1000);
+    
     analyze(); */
-    printf("\n");
+
     
     byte*a[100];
     analyze();//50% points
@@ -259,13 +284,13 @@ void main()
     for(int i=0;i<90;i++)
     myfree(a[i]);
     analyze(); //50% of points if this is correct
-/*     myfree(a[95]);
+    myfree(a[95]);
      a[95] = mymalloc(1000);
     analyze();//25% points, this new chunk should fill the smaller free one
     //(best fit)
     for(int i=90;i<100;i++)
     myfree(a[i]);
     analyze();// 25% should be an empty heap now with the start address from the program start
- */
+
 
 }
